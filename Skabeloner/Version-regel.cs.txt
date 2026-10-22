@@ -1,0 +1,7 @@
+// Erstat svarvalget inde i TCP-serverens læseløkke:
+string reply = line switch
+{
+    "PING" => "PONG",
+    "VERSION" => "VERSION 1",
+    _ => $"ECHO {line}"
+};

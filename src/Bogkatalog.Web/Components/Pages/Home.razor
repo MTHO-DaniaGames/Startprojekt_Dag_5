@@ -1,0 +1,112 @@
+@page "/"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inject BookApiClient Api
+@inject ILogger<Home> Logger
+@using System.Text.Json
+
+<PageTitle>Bogkatalog</PageTitle>
+<h1>Bogkatalog</h1>
+<p class="notice">Web henter og opretter bøger gennem Bogkatalog.Api.</p>
+<button @onclick="LoadAsync" disabled="@(loading || saving)">Hent igen</button>
+@if (loading) { <p role="status">Henter bøger fra API'et …</p> }
+@if (!string.IsNullOrEmpty(loadError)) { <p role="alert" class="validation-message">@loadError</p> }
+@if (hasLoaded)
+{
+    <h2>Bøger (@books.Count)</h2>
+    @if (books.Count == 0) { <p>API'et returnerede en tom bogliste.</p> }
+    <table><thead><tr><th>Titel</th><th>Forfatter</th><th>Sider</th></tr></thead><tbody>
+    @foreach (var book in books)
+    { <tr @key="book.Id"><td>@book.Title</td><td>@book.Author</td><td>@book.Pages</td></tr> }
+    </tbody></table>
+}
+<h2>Tilføj en bog</h2>
+<EditForm Model="draft" OnValidSubmit="SaveAsync" FormName="add-book">
+    <DataAnnotationsValidator />
+    <fieldset disabled="@(saving || loading)">
+        <label>Titel<InputText @bind-Value="draft.Title" /></label><ValidationMessage For="() => draft.Title" />
+        <label>Forfatter<InputText @bind-Value="draft.Author" /></label><ValidationMessage For="() => draft.Author" />
+        <label>Antal sider<InputNumber @bind-Value="draft.Pages" /></label><ValidationMessage For="() => draft.Pages" />
+        <button type="submit">@(saving ? "Gemmer …" : "Tilføj bog")</button>
+    </fieldset>
+</EditForm>
+@if (!string.IsNullOrEmpty(saveError)) { <p role="alert" class="validation-message">@saveError</p> }
+<p role="status">@message</p>
+
+@code {
+    private List<Book> books = new();
+    private Book draft = new();
+    private bool loading, saving, hasLoaded;
+    private string loadError = "", saveError = "", message = "";
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        loadError = "";
+        try
+        {
+            books = await Api.GetAllAsync();
+            hasLoaded = true;
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogWarning(ex, "Hentning af bøger mislykkedes");
+            loadError = ex.StatusCode is null
+                ? "Kan ikke kontakte API'et. Kontrollér API og adresse, og vælg Hent igen."
+                : $"API'et svarede med HTTP {(int)ex.StatusCode.Value}. Kontrollér requesten.";
+        }
+        catch (OperationCanceledException ex)
+        {
+            Logger.LogWarning(ex, "Hentning overskred tidsgrænsen");
+            loadError = "API-kaldet blev afbrudt eller tog for lang tid. Prøv Hent igen.";
+        }
+        catch (JsonException ex)
+        {
+            Logger.LogWarning(ex, "Boglisten havde et uventet dataformat");
+            loadError = "Svaret fra API'et kunne ikke læses som en bogliste.";
+        }
+        finally { loading = false; }
+        if (hasLoaded && loadError != "")
+            loadError += " Listen viser de senest hentede data.";
+    }
+
+    private async Task SaveAsync()
+    {
+        if (saving) return;
+        saving = true;
+        saveError = "";
+        message = "";
+        try
+        {
+            var input = new BookInput(draft.Title, draft.Author, draft.Pages);
+            var created = await Api.AddAsync(input);
+            message = $"Bogen {created.Title} er oprettet med Id {created.Id}.";
+            draft = new();
+            await LoadAsync();
+        }
+        catch (BookValidationException ex)
+        {
+            var errors = ex.Errors.Values.SelectMany(values => values);
+            saveError = ex.Errors.Count > 0 ? string.Join(" ", errors) : "API'et afviste oplysningerne.";
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogWarning(ex, "Oprettelse af bog mislykkedes");
+            saveError = ex.StatusCode is null
+                ? "Kaldet mislykkedes uden et HTTP-svar. Hent listen igen, før du prøver at oprette bogen på ny."
+                : $"API'et svarede med HTTP {(int)ex.StatusCode.Value}. Bogen er ikke bekræftet oprettet.";
+        }
+        catch (OperationCanceledException ex)
+        {
+            Logger.LogWarning(ex, "Oprettelse blev afbrudt");
+            saveError = "Intet svar inden tidsgrænsen. Bogen kan være oprettet. Hent listen igen før et nyt forsøg.";
+        }
+        catch (JsonException ex)
+        {
+            Logger.LogWarning(ex, "Svaret efter oprettelse havde et uventet dataformat");
+            saveError = "Svaret kunne ikke læses. Bogen kan være oprettet. Hent listen igen før et nyt forsøg.";
+        }
+        finally { saving = false; }
+    }
+}

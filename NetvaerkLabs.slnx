@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/NetvaerkLabs/">
+    <Project Path="NetvaerkLabs/TcpServer/TcpServer.csproj" />
+    <Project Path="NetvaerkLabs/TcpClient/TcpClient.csproj" />
+    <Project Path="NetvaerkLabs/UdpReceiver/UdpReceiver.csproj" />
+    <Project Path="NetvaerkLabs/UdpSender/UdpSender.csproj" />
+    <Project Path="NetvaerkLabs/DiscoveryServer/DiscoveryServer.csproj" />
+    <Project Path="NetvaerkLabs/DiscoveryClient/DiscoveryClient.csproj" />
+    <Project Path="NetvaerkLabs/MulticastReceiver/MulticastReceiver.csproj" />
+    <Project Path="NetvaerkLabs/MulticastSender/MulticastSender.csproj" />
+  </Folder>
+</Solution>

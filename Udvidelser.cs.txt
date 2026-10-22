@@ -1,0 +1,23 @@
+// Tilføj disse metoder inde i BookApiClient-klassen.
+// Filen er en skabelon. Opret ikke endnu en BookApiClient-klasse.
+
+public async Task DeleteAsync(int id)
+{
+    using var http = factory.CreateClient("Books");
+    using var response = await http.DeleteAsync($"api/books/{id}");
+    response.EnsureSuccessStatusCode();
+}
+
+public async Task<Book> UpdateAsync(int id, BookInput input)
+{
+    using var http = factory.CreateClient("Books");
+    using var response = await http.PutAsJsonAsync($"api/books/{id}", input);
+    if (response.StatusCode == HttpStatusCode.BadRequest)
+    {
+        var problem = await response.Content.ReadFromJsonAsync<ValidationResponse>();
+        throw new BookValidationException(problem?.Errors ?? new());
+    }
+    response.EnsureSuccessStatusCode();
+    return await response.Content.ReadFromJsonAsync<Book>()
+        ?? throw new JsonException("API returnerede null.");
+}

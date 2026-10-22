@@ -1,0 +1,104 @@
+@baseUrl = http://localhost:5200
+
+### A0 Kontrol: 200 OK
+GET {{baseUrl}}/health
+
+### A1 Alle bøger: 200 og en JSON-liste
+GET {{baseUrl}}/api/books
+
+### A2 Én bog: 200 og et JSON-objekt
+GET {{baseUrl}}/api/books/1
+
+### A3 Ukendt bog: 404
+GET {{baseUrl}}/api/books/9999
+
+### B1 Opret: 201, Location og JSON. Første nye Id er 3 efter en frisk start.
+POST {{baseUrl}}/api/books
+Content-Type: application/json
+
+{
+  "title": "Dune",
+  "author": "Frank Herbert",
+  "pages": 412
+}
+
+### B2 Hent ny bog. Ret 3 til Id fra dit faktiske POST-svar.
+GET {{baseUrl}}/api/books/3
+
+### B3 Ugyldigt input: 400. Antallet må ikke vokse.
+POST {{baseUrl}}/api/books
+Content-Type: application/json
+
+{
+  "title": " ",
+  "author": "Frank Herbert",
+  "pages": 0
+}
+
+### B4 Manglende title: 400
+POST {{baseUrl}}/api/books
+Content-Type: application/json
+
+{
+  "author": "Frank Herbert",
+  "pages": 412
+}
+
+### B5 Forkert JSON-type: 400 fra frameworket før handleren kører
+POST {{baseUrl}}/api/books
+Content-Type: application/json
+
+{
+  "title": "Dune",
+  "author": "Frank Herbert",
+  "pages": "mange"
+}
+
+### C1 Erstat bog 3: 200. Brug et Id, som findes.
+PUT {{baseUrl}}/api/books/3
+Content-Type: application/json
+
+{
+  "title": "Dune – ny udgave",
+  "author": "Frank Herbert",
+  "pages": 420
+}
+
+### C2 Slet bog 3: 204 første gang, 404 anden gang
+DELETE {{baseUrl}}/api/books/3
+
+### C3 GET efter sletning: 404
+GET {{baseUrl}}/api/books/3
+
+### C4 Ukendt bog med PUT og gyldigt input: 404
+PUT {{baseUrl}}/api/books/9999
+Content-Type: application/json
+
+{
+  "title": "Dune",
+  "author": "Frank Herbert",
+  "pages": 412
+}
+
+### C5 Ugyldigt input til PUT: 400
+PUT {{baseUrl}}/api/books/1
+Content-Type: application/json
+
+{
+  "title": "",
+  "author": "",
+  "pages": 5001
+}
+
+### R1 Filtrér: 200 og matchende bøger
+GET {{baseUrl}}/api/books?title=Hob
+
+### R2 Ingen match: 200 og []
+GET {{baseUrl}}/api/books?title=zzzzzz
+
+### R3 Tomt filter: 200 og alle bøger
+GET {{baseUrl}}/api/books?title=
+
+### Kontrol fra dag 1: /about giver 200 og JSON med name og version
+GET {{baseUrl}}/about
+
